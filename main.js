@@ -294,6 +294,8 @@ async function updateScore() {
     }
 }
 
+// ... (código anterior se mantiene igual)
+
 async function loadScoreboard() {
     try {
         // Mostrar indicador de carga
@@ -314,6 +316,7 @@ async function loadScoreboard() {
         
         if (response.ok) {
             const data = await response.json();
+            console.log("Datos recibidos de la API:", data); // Para depuración
             displayScoreboard(data.usuarios);
         } else {
             // Error al cargar la tabla de puntuaciones
@@ -324,6 +327,7 @@ async function loadScoreboard() {
                     <div class="score">---</div>
                 </div>
             `;
+            console.error("Error en la respuesta:", response.status);
         }
     } catch (error) {
         scoreboardBody.innerHTML = `
@@ -333,6 +337,7 @@ async function loadScoreboard() {
                 <div class="score">---</div>
             </div>
         `;
+        console.error("Error en la solicitud:", error);
     }
 }
 
@@ -352,8 +357,23 @@ function displayScoreboard(users) {
         return;
     }
     
+    // Depuración: mostrar la estructura de los datos de usuario
+    console.log("Estructura del primer usuario:", users[0]);
+    
     // Ordenar usuarios por puntuación (de mayor a menor)
-    users.sort((a, b) => (b.score || 0) - (a.score || 0));
+    // Buscar el campo correcto que contiene la puntuación
+    users.sort((a, b) => {
+        // Intentar encontrar el campo de puntuación
+        const scoreA = a.score !== undefined ? a.score : 
+                      (a.puntuacion !== undefined ? a.puntuacion : 
+                      (a.points !== undefined ? a.points : 0));
+        
+        const scoreB = b.score !== undefined ? b.score : 
+                      (b.puntuacion !== undefined ? b.puntuacion : 
+                      (b.points !== undefined ? b.points : 0));
+        
+        return scoreB - scoreA;
+    });
     
     // Agregar usuarios a la tabla
     users.forEach((user, index) => {
@@ -363,6 +383,19 @@ function displayScoreboard(users) {
         // Resaltar usuario actual
         if (user.username === currentUsername) {
             item.classList.add('current-user');
+        }
+        
+        // Intentar encontrar el campo de puntuación
+        let userScore = 0;
+        if (user.score !== undefined) {
+            userScore = user.score;
+        } else if (user.puntuacion !== undefined) {
+            userScore = user.puntuacion;
+        } else if (user.points !== undefined) {
+            userScore = user.points;
+        } else {
+            // Si no encontramos el campo, mostramos todos los campos para depuración
+            console.log("Usuario sin campo score claro:", user);
         }
         
         // Agregar iconos para los primeros puestos
@@ -378,13 +411,14 @@ function displayScoreboard(users) {
         item.innerHTML = `
             <div class="position">${medalIcon}${index + 1}</div>
             <div class="username">${user.username}</div>
-            <div class="score">${user.score || 0}</div>
+            <div class="score">${userScore}</div>
         `;
         
         scoreboardBody.appendChild(item);
     });
 }
 
+// ... (el resto del código se mantiene igual)
 // Utilidades
 function showError(element, message) {
     element.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
