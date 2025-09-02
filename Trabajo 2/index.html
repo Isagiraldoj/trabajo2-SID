@@ -1,121 +1,153 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Puntuaciones · SID REST API (JS)</title>
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Puntuaciones - [Tu Nombre]</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="app-header">
-    <h1>Sistema de Usuarios & Puntajes</h1>
-    <div class="brand">Tu Nombre Completo</div>
-  </header>
+    <div class="background-animation"></div>
+    
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-trophy"></i>
+                <h1>ScoreMaster</h1>
+            </div>
+            <div class="student-name">Desarrollado por: ISABELA GIRALDO JIMENEZ</div>
+        </header>
 
-  <!-- PANTALLA DE AUTENTICACIÓN -->
-  <main id="auth-screen" class="screen">
-    <div class="card">
-      <div class="tabs">
-        <button id="tab-login" class="tab active">Login</button>
-        <button id="tab-register" class="tab">Registro</button>
-      </div>
+        <!-- Panel de Login -->
+        <div id="loginPanel" class="panel slide-in">
+            <div class="panel-header">
+                <h2><i class="fas fa-sign-in-alt"></i> Iniciar Sesión</h2>
+                <p>Ingresa a tu cuenta para gestionar tus puntuaciones</p>
+            </div>
+            
+            <div class="input-with-icon">
+                <i class="fas fa-user"></i>
+                <input type="text" id="username" placeholder="Ingresa tu usuario">
+            </div>
+            <div class="input-with-icon">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="password" placeholder="Ingresa tu contraseña">
+            </div>
+            <button id="loginButton" class="btn btn-primary">
+                <i class="fas fa-paper-plane"></i> Iniciar Sesión
+            </button>
+            <div id="loginError" class="error-message"></div>
+            
+            <div class="panel-footer">
+                <p>¿No tienes una cuenta? <button id="showRegister" class="link-button">Regístrate aquí</button></p>
+            </div>
+        </div>
 
-      <!-- LOGIN -->
-      <form id="form-login" class="stack">
-        <label>
-          Usuario
-          <input id="login-username" type="text" autocomplete="username" required />
-        </label>
-        <label>
-          Contraseña
-          <input id="login-password" type="password" autocomplete="current-password" required />
-        </label>
-        <button class="primary" type="submit">Iniciar sesión</button>
-        <p class="help">Aún no tienes cuenta? Cambia a la pestaña Registro.</p>
-        <div id="login-msg" class="msg"></div>
-      </form>
+        <!-- Panel de Registro -->
+        <div id="registerPanel" class="panel hidden slide-in">
+            <div class="panel-header">
+                <h2><i class="fas fa-user-plus"></i> Crear Cuenta</h2>
+                <p>Regístrate para comenzar a guardar tus puntuaciones</p>
+            </div>
+            
+            <div class="input-with-icon">
+                <i class="fas fa-user"></i>
+                <input type="text" id="newUsername" placeholder="Elige un usuario">
+            </div>
+            <div class="input-with-icon">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="newPassword" placeholder="Crea una contraseña">
+            </div>
+            <div class="input-with-icon">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="confirmPassword" placeholder="Repite tu contraseña">
+            </div>
+            <button id="registerButton" class="btn btn-secondary">
+                <i class="fas fa-user-plus"></i> Registrarse
+            </button>
+            <div id="registerError" class="error-message"></div>
+            <div id="registerSuccess" class="success-message"></div>
+            
+            <div class="panel-footer">
+                <p>¿Ya tienes una cuenta? <button id="showLogin" class="link-button">Inicia sesión aquí</button></p>
+            </div>
+        </div>
 
-      <!-- REGISTRO -->
-      <form id="form-register" class="stack hidden">
-        <label>
-          Usuario
-          <input id="register-username" type="text" required />
-        </label>
-        <label>
-          Contraseña
-          <input id="register-password" type="password" required />
-        </label>
-        <button class="primary" type="submit">Crear cuenta</button>
-        <div id="register-msg" class="msg"></div>
-      </form>
+        <!-- Panel Principal -->
+        <div id="mainPanel" class="panel hidden">
+            <div class="user-header">
+                <div class="user-info">
+                    <div class="avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <h2>Bienvenido, <span id="welcomeUsername"></span>!</h2>
+                        <p>Gestiona tus puntuaciones y compite con otros jugadores</p>
+                    </div>
+                </div>
+                <button id="logoutButton" class="btn btn-accent">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </button>
+            </div>
+            
+            <div class="navigation">
+                <button id="updateScoreBtn" class="nav-btn active">
+                    <i class="fas fa-chart-line"></i> Actualizar Puntuación
+                </button>
+                <button id="showScoreboardBtn" class="nav-btn">
+                    <i class="fas fa-trophy"></i> Tabla de Puntuaciones
+                </button>
+            </div>
+            
+            <!-- Formulario para actualizar puntuación -->
+            <div id="updateScoreSection" class="content-section">
+                <div class="section-header">
+                    <h3><i class="fas fa-pencil-alt"></i> Actualizar tu puntuación</h3>
+                    <p>Ingresa tu nueva puntuación para guardarla en el sistema</p>
+                </div>
+                
+                <div class="score-form">
+                    <div class="input-with-icon">
+                        <i class="fas fa-star"></i>
+                        <input type="number" id="newScore" placeholder="Ingresa tu nueva puntuación">
+                    </div>
+                    <button id="submitScore" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Actualizar
+                    </button>
+                </div>
+                <div id="scoreError" class="error-message"></div>
+                <div id="scoreSuccess" class="success-message"></div>
+            </div>
+            
+            <!-- Tabla de puntuaciones -->
+            <div id="scoreboardSection" class="content-section hidden">
+                <div class="section-header">
+                    <h3><i class="fas fa-trophy"></i> Tabla de Puntuaciones</h3>
+                    <p>Los mejores jugadores de la plataforma</p>
+                </div>
+                
+                <div class="scoreboard-container">
+                    <div class="scoreboard-header">
+                        <span>Posición</span>
+                        <span>Usuario</span>
+                        <span>Puntuación</span>
+                    </div>
+                    <div id="scoreboardBody" class="scoreboard-body">
+                        <!-- Los datos se cargarán dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </main>
 
-  <!-- PANTALLA DE APP -->
-  <main id="app-screen" class="screen hidden">
-    <section class="topbar">
-      <div>
-        <strong>Sesión:</strong>
-        <span id="session-user">—</span>
-        <span id="token-state" class="tag">token…</span>
-      </div>
-      <div class="actions">
-        <button id="btn-refresh" class="secondary">Refrescar</button>
-        <button id="btn-logout" class="danger">Salir</button>
-      </div>
-    </section>
+    <footer>
+        <p>Sistema de Autenticación y Puntuaciones - Desarrollado por [Tu Nombre]</p>
+    </footer>
 
-    <section class="grid">
-      <!-- PERFIL -->
-      <div class="card">
-        <h2>Perfil</h2>
-        <div id="profile-box" class="mono small">—</div>
-      </div>
-
-      <!-- ACTUALIZAR SCORE -->
-      <div class="card">
-        <h2>Actualizar Score</h2>
-        <form id="form-score" class="row">
-          <input id="score-value" type="number" min="0" step="1" placeholder="Nuevo score" required />
-          <button class="primary" type="submit">Guardar</button>
-        </form>
-        <div id="score-msg" class="msg"></div>
-      </div>
-    </section>
-
-    <!-- LEADERBOARD -->
-    <section class="card">
-      <h2>Tabla de Puntajes</h2>
-      <form id="form-list" class="row wrap">
-        <label>Limit <input id="list-limit" type="number" min="1" value="50" /></label>
-        <label>Skip <input id="list-skip" type="number" min="0" value="0" /></label>
-        <label class="row center">
-          <input id="list-sort" type="checkbox" checked />
-          Ordenar desc.
-        </label>
-        <button class="secondary" type="submit">Listar</button>
-      </form>
-      <div class="table-wrap">
-        <table id="tbl-users">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Usuario</th>
-              <th>Score</th>
-              <th>Estado</th>
-              <th>UID</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <small>Demo JS + Fetch · API: https://sid-restapi.onrender.com</small>
-  </footer>
-
-  <script src="app.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>

@@ -1,279 +1,397 @@
-// =========================
-// Config
-// =========================
-const API_BASE = "https://sid-restapi.onrender.com";
+// Constantes y variables globales
+const API_URL = 'https://sid-restapi.onrender.com';
+let authToken = '';
+let currentUsername = '';
 
-const els = {
-  // Screens
-  auth: document.getElementById("auth-screen"),
-  app: document.getElementById("app-screen"),
+// Elementos del DOM
+const loginPanel = document.getElementById('loginPanel');
+const registerPanel = document.getElementById('registerPanel');
+const mainPanel = document.getElementById('mainPanel');
+const loginButton = document.getElementById('loginButton');
+const registerButton = document.getElementById('registerButton');
+const showRegisterButton = document.getElementById('showRegister');
+const showLoginButton = document.getElementById('showLogin');
+const logoutButton = document.getElementById('logoutButton');
+const updateScoreBtn = document.getElementById('updateScoreBtn');
+const showScoreboardBtn = document.getElementById('showScoreboardBtn');
+const submitScoreButton = document.getElementById('submitScore');
+const welcomeUsername = document.getElementById('welcomeUsername');
+const updateScoreSection = document.getElementById('updateScoreSection');
+const scoreboardSection = document.getElementById('scoreboardSection');
+const scoreboardBody = document.getElementById('scoreboardBody');
+const newScoreInput = document.getElementById('newScore');
 
-  // Tabs/forms
-  tabLogin: document.getElementById("tab-login"),
-  tabRegister: document.getElementById("tab-register"),
-  formLogin: document.getElementById("form-login"),
-  formRegister: document.getElementById("form-register"),
+// Mensajes de error/éxito
+const loginError = document.getElementById('loginError');
+const registerError = document.getElementById('registerError');
+const registerSuccess = document.getElementById('registerSuccess');
+const scoreError = document.getElementById('scoreError');
+const scoreSuccess = document.getElementById('scoreSuccess');
 
-  // Login inputs/messages
-  loginUser: document.getElementById("login-username"),
-  loginPass: document.getElementById("login-password"),
-  loginMsg: document.getElementById("login-msg"),
+// Inicialización
+document.addEventListener('DOMContentLoaded', init);
 
-  // Register inputs/messages
-  regUser: document.getElementById("register-username"),
-  regPass: document.getElementById("register-password"),
-  regMsg: document.getElementById("register-msg"),
-
-  // App screen
-  sessionUser: document.getElementById("session-user"),
-  tokenState: document.getElementById("token-state"),
-  btnLogout: document.getElementById("btn-logout"),
-  btnRefresh: document.getElementById("btn-refresh"),
-
-  // Profile
-  profileBox: document.getElementById("profile-box"),
-
-  // Score
-  formScore: document.getElementById("form-score"),
-  scoreInput: document.getElementById("score-value"),
-  scoreMsg: document.getElementById("score-msg"),
-
-  // List
-  formList: document.getElementById("form-list"),
-  listLimit: document.getElementById("list-limit"),
-  listSkip: document.getElementById("list-skip"),
-  listSort: document.getElementById("list-sort"),
-  tblUsersBody: document.querySelector("#tbl-users tbody"),
-};
-
-// =========================
-// Helpers: storage & fetch
-// =========================
-const storage = {
-  get token() { return localStorage.getItem("authToken") || ""; },
-  set token(v) { v ? localStorage.setItem("authToken", v) : localStorage.removeItem("authToken"); },
-  get username() { return localStorage.getItem("username") || ""; },
-  set username(v) { v ? localStorage.setItem("username", v) : localStorage.removeItem("username"); },
-};
-
-async function apiFetch(path, { method = "GET", body, auth = false } = {}) {
-  const headers = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (auth) headers["x-token"] = storage.token;
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-
-  const text = await res.text();
-  let data;
-  try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
-
-  if (!res.ok) {
-    const msg = data?.msg || data?.message || `HTTP ${res.status}`;
-    throw new Error(msg);
-  }
-  return data;
-}
-
-function setTokenState(ok) {
-  els.tokenState.textContent = ok ? "token válido" : "token inválido";
-  els.tokenState.className = `tag ${ok ? "ok" : "bad"}`;
-}
-
-// =========================
-// UI switching
-// =========================
-function showAuth() {
-  els.auth.classList.remove("hidden");
-  els.app.classList.add("hidden");
-}
-function showApp() {
-  els.auth.classList.add("hidden");
-  els.app.classList.remove("hidden");
-  els.sessionUser.textContent = storage.username || "—";
-}
-
-// Tabs
-els.tabLogin.addEventListener("click", () => {
-  els.tabLogin.classList.add("active");
-  els.tabRegister.classList.remove("active");
-  els.formLogin.classList.remove("hidden");
-  els.formRegister.classList.add("hidden");
-});
-els.tabRegister.addEventListener("click", () => {
-  els.tabRegister.classList.add("active");
-  els.tabLogin.classList.remove("active");
-  els.formRegister.classList.remove("hidden");
-  els.formLogin.classList.add("hidden");
-});
-
-// =========================
-// Auth: Register & Login
-// =========================
-els.formRegister.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  els.regMsg.textContent = "Registrando...";
-  els.regMsg.className = "msg";
-
-  try {
-    const username = els.regUser.value.trim();
-    const password = els.regPass.value;
-    await apiFetch("/api/usuarios", { method: "POST", body: { username, password } });
-    els.regMsg.textContent = "Usuario creado. Ahora inicia sesión 👉";
-    els.regMsg.classList.add("ok");
-    // Opcional: pasar a login con el usuario precargado
-    els.tabLogin.click();
-    els.loginUser.value = username;
-    els.loginPass.value = "";
-  } catch (err) {
-    els.regMsg.textContent = `Error: ${err.message}`;
-    els.regMsg.classList.add("err");
-  }
-});
-
-els.formLogin.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  els.loginMsg.textContent = "Autenticando...";
-  els.loginMsg.className = "msg";
-
-  try {
-    const username = els.loginUser.value.trim();
-    const password = els.loginPass.value;
-    const data = await apiFetch("/api/auth/login", { method: "POST", body: { username, password } });
-    // Esperado: { usuario, token }
-    storage.token = data?.token || "";
-    storage.username = data?.usuario?.username || username;
-    els.loginMsg.textContent = "¡Sesión iniciada!";
-    els.loginMsg.classList.add("ok");
-    await enterApp();
-  } catch (err) {
-    els.loginMsg.textContent = `Error: ${err.message}`;
-    els.loginMsg.classList.add("err");
-  }
-});
-
-els.btnLogout.addEventListener("click", () => {
-  storage.token = "";
-  storage.username = "";
-  showAuth();
-});
-
-// =========================
-async function validateToken() {
-  if (!storage.token || !storage.username) return false;
-  try {
-    // pequeña consulta de perfil para validar token
-    await apiFetch(`/api/usuarios?username=${encodeURIComponent(storage.username)}`, { auth: true });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function loadProfile() {
-  els.profileBox.textContent = "Cargando perfil...";
-  try {
-    const data = await apiFetch(`/api/usuarios?username=${encodeURIComponent(storage.username)}`, { auth: true });
-    // Respuesta esperada: { usuario }
-    const user = data?.usuario || data;
-    els.profileBox.textContent = JSON.stringify(user, null, 2);
-  } catch (err) {
-    els.profileBox.textContent = `Error: ${err.message}`;
-  }
-}
-
-async function loadUsers() {
-  const limit = Number(els.listLimit.value || 50);
-  const skip = Number(els.listSkip.value || 0);
-  const sort = !!els.listSort.checked;
-
-  els.tblUsersBody.innerHTML = `<tr><td colspan="5">Cargando...</td></tr>`;
-  try {
-    const data = await apiFetch(`/api/usuarios?limit=${limit}&skip=${skip}&sort=${sort}`, { auth: true });
-    const list = data?.usuarios || data || [];
-
-    // Ordenar por score descendente por si el backend no lo hace
-    list.sort((a, b) => (Number(b?.score ?? 0) - Number(a?.score ?? 0)));
-
-    els.tblUsersBody.innerHTML = "";
-    list.forEach((u, i) => {
-      const tr = document.createElement("tr");
-      const score = (u && (u.score ?? u?.data?.score)) ?? 0;
-      tr.innerHTML = `
-        <td>${i + 1}</td>
-        <td>${u?.username ?? "—"}</td>
-        <td>${Number(score) || 0}</td>
-        <td>${String(u?.state ?? "—")}</td>
-        <td class="mono small">${u?.uid ?? "—"}</td>
-      `;
-      els.tblUsersBody.appendChild(tr);
-    });
-
-    if (!list.length) {
-      els.tblUsersBody.innerHTML = `<tr><td colspan="5">Sin usuarios.</td></tr>`;
+function init() {
+    // Verificar si hay un token almacenado
+    authToken = localStorage.getItem('token') || '';
+    currentUsername = localStorage.getItem('username') || '';
+    
+    // Configurar event listeners
+    setupEventListeners();
+    
+    // Verificar autenticación al cargar
+    if (authToken && currentUsername) {
+        verifyToken();
+    } else {
+        showLoginPanel();
     }
-  } catch (err) {
-    els.tblUsersBody.innerHTML = `<tr><td colspan="5" class="msg err">Error: ${err.message}</td></tr>`;
-  }
 }
 
-els.formList.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  await loadUsers();
-});
-
-els.btnRefresh.addEventListener("click", async () => {
-  await enterApp(); // recarga perfil + tabla
-});
-
-// =========================
-// Actualizar score (PATCH)
-// =========================
-els.formScore.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  els.scoreMsg.textContent = "Guardando...";
-  els.scoreMsg.className = "msg";
-
-  try {
-    const score = Number(els.scoreInput.value);
-    const body = {
-      username: storage.username,
-      data: { score }, // según el diagrama: { username, data:{} }
-    };
-    await apiFetch("/api/usuarios", { method: "PATCH", body, auth: true });
-    els.scoreMsg.textContent = "Score actualizado.";
-    els.scoreMsg.classList.add("ok");
-    els.scoreInput.value = "";
-    await loadProfile();
-    await loadUsers();
-  } catch (err) {
-    els.scoreMsg.textContent = `Error: ${err.message}`;
-    els.scoreMsg.classList.add("err");
-  }
-});
-
-// =========================
-// Entrar a la app
-// =========================
-async function enterApp() {
-  showApp();
-  els.sessionUser.textContent = storage.username || "—";
-  const ok = await validateToken();
-  setTokenState(ok);
-  if (!ok) return showAuth();
-  await Promise.all([loadProfile(), loadUsers()]);
+function setupEventListeners() {
+    // Botones de navegación
+    loginButton.addEventListener('click', login);
+    registerButton.addEventListener('click', register);
+    showRegisterButton.addEventListener('click', showRegisterPanel);
+    showLoginButton.addEventListener('click', showLoginPanel);
+    logoutButton.addEventListener('click', logout);
+    updateScoreBtn.addEventListener('click', showUpdateScoreSection);
+    showScoreboardBtn.addEventListener('click', showScoreboard);
+    submitScoreButton.addEventListener('click', updateScore);
+    
+    // Permitir enviar formularios con Enter
+    document.getElementById('password').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') login();
+    });
+    
+    document.getElementById('confirmPassword').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') register();
+    });
+    
+    newScoreInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') updateScore();
+    });
 }
 
-// =========================
-// Boot
-// =========================
-(async function boot() {
-  if (storage.token && storage.username) {
-    await enterApp();
-  } else {
-    showAuth();
-  }
-})();
+// Funciones de navegación
+function showLoginPanel() {
+    loginPanel.classList.remove('hidden');
+    registerPanel.classList.add('hidden');
+    mainPanel.classList.add('hidden');
+    clearMessages();
+}
+
+function showRegisterPanel() {
+    loginPanel.classList.add('hidden');
+    registerPanel.classList.remove('hidden');
+    mainPanel.classList.add('hidden');
+    clearMessages();
+}
+
+function showMainPanel() {
+    loginPanel.classList.add('hidden');
+    registerPanel.classList.add('hidden');
+    mainPanel.classList.remove('hidden');
+    welcomeUsername.textContent = currentUsername;
+    showUpdateScoreSection();
+    clearMessages();
+}
+
+function showUpdateScoreSection() {
+    updateScoreSection.classList.remove('hidden');
+    scoreboardSection.classList.add('hidden');
+    updateScoreBtn.classList.add('active');
+    showScoreboardBtn.classList.remove('active');
+}
+
+function showScoreboard() {
+    updateScoreSection.classList.add('hidden');
+    scoreboardSection.classList.remove('hidden');
+    updateScoreBtn.classList.remove('active');
+    showScoreboardBtn.classList.add('active');
+    loadScoreboard();
+}
+
+function clearMessages() {
+    loginError.style.display = 'none';
+    registerError.style.display = 'none';
+    registerSuccess.style.display = 'none';
+    scoreError.style.display = 'none';
+    scoreSuccess.style.display = 'none';
+}
+
+// Funciones de autenticación
+async function login() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    
+    if (!username || !password) {
+        showError(loginError, 'Por favor, completa todos los campos');
+        return;
+    }
+    
+    try {
+        // Mostrar estado de carga
+        loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando sesión...';
+        loginButton.disabled = true;
+        
+        const response = await fetch(`${API_URL}/api/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            authToken = data.token;
+            currentUsername = username;
+            
+            // Guardar en localStorage
+            localStorage.setItem('token', authToken);
+            localStorage.setItem('username', currentUsername);
+            
+            showMainPanel();
+        } else {
+            const error = await response.json();
+            showError(loginError, error.msg || 'Error en usuario o contraseña');
+        }
+    } catch (error) {
+        showError(loginError, 'Error de conexión');
+    } finally {
+        // Restaurar estado normal del botón
+        loginButton.innerHTML = '<i class="fas fa-paper-plane"></i> Iniciar Sesión';
+        loginButton.disabled = false;
+    }
+}
+
+async function register() {
+    const username = document.getElementById('newUsername').value;
+    const password = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (!username || !password || !confirmPassword) {
+        showError(registerError, 'Por favor, completa todos los campos');
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        showError(registerError, 'Las contraseñas no coinciden');
+        return;
+    }
+    
+    try {
+        // Mostrar estado de carga
+        registerButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
+        registerButton.disabled = true;
+        
+        const response = await fetch(`${API_URL}/api/usuarios`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
+        
+        if (response.ok) {
+            showSuccess(registerSuccess, 'Usuario registrado correctamente. Ahora puedes iniciar sesión.');
+            
+            // Limpiar formulario
+            document.getElementById('newUsername').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        } else {
+            const error = await response.json();
+            showError(registerError, error.msg || 'Error al registrar usuario');
+        }
+    } catch (error) {
+        showError(registerError, 'Error de conexión');
+    } finally {
+        // Restaurar estado normal del botón
+        registerButton.innerHTML = '<i class="fas fa-user-plus"></i> Registrarse';
+        registerButton.disabled = false;
+    }
+}
+
+async function verifyToken() {
+    try {
+        const response = await fetch(`${API_URL}/api/usuarios/${currentUsername}`, {
+            method: 'GET',
+            headers: {
+                'x-token': authToken
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            // Verificar que el usuario tenga datos
+            if (data.usuario) {
+                showMainPanel();
+            } else {
+                logout();
+            }
+        } else {
+            // Token inválido, cerrar sesión
+            logout();
+        }
+    } catch (error) {
+        showError(loginError, 'Error de conexión');
+    }
+}
+
+function logout() {
+    authToken = '';
+    currentUsername = '';
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    showLoginPanel();
+}
+
+// Funciones de puntuación
+async function updateScore() {
+    const newScore = parseInt(newScoreInput.value);
+    
+    if (isNaN(newScore) || newScore < 0) {
+        showError(scoreError, 'Por favor, ingresa una puntuación válida');
+        return;
+    }
+    
+    try {
+        // Mostrar estado de carga
+        submitScoreButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
+        submitScoreButton.disabled = true;
+        
+        const response = await fetch(`${API_URL}/api/usuarios`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-token': authToken
+            },
+            body: JSON.stringify({ 
+                username: currentUsername,
+                data: { score: newScore }
+            })
+        });
+        
+        if (response.ok) {
+            showSuccess(scoreSuccess, 'Puntuación actualizada correctamente');
+            newScoreInput.value = '';
+            
+            // Recargar la tabla de puntuaciones si está visible
+            if (!scoreboardSection.classList.contains('hidden')) {
+                loadScoreboard();
+            }
+        } else {
+            const error = await response.json();
+            showError(scoreError, error.msg || 'Error al actualizar la puntuación');
+        }
+    } catch (error) {
+        showError(scoreError, 'Error de conexión');
+    } finally {
+        // Restaurar estado normal del botón
+        submitScoreButton.innerHTML = '<i class="fas fa-save"></i> Actualizar';
+        submitScoreButton.disabled = false;
+    }
+}
+
+async function loadScoreboard() {
+    try {
+        // Mostrar indicador de carga
+        scoreboardBody.innerHTML = `
+            <div class="scoreboard-item" style="text-align: center;">
+                <div class="position"><i class="fas fa-spinner fa-spin"></i></div>
+                <div class="username">Cargando puntuaciones</div>
+                <div class="score">...</div>
+            </div>
+        `;
+        
+        const response = await fetch(`${API_URL}/api/usuarios?limit=100&sort=true`, {
+            method: 'GET',
+            headers: {
+                'x-token': authToken
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayScoreboard(data.usuarios);
+        } else {
+            // Error al cargar la tabla de puntuaciones
+            scoreboardBody.innerHTML = `
+                <div class="scoreboard-item" style="text-align: center; color: var(--error-color);">
+                    <div class="position"><i class="fas fa-exclamation-circle"></i></div>
+                    <div class="username">Error al cargar la tabla</div>
+                    <div class="score">---</div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        scoreboardBody.innerHTML = `
+            <div class="scoreboard-item" style="text-align: center; color: var(--error-color);">
+                <div class="position"><i class="fas fa-exclamation-circle"></i></div>
+                <div class="username">Error de conexión</div>
+                <div class="score">---</div>
+            </div>
+        `;
+    }
+}
+
+function displayScoreboard(users) {
+    // Limpiar tabla
+    scoreboardBody.innerHTML = '';
+    
+    // Verificar si hay usuarios
+    if (!users || users.length === 0) {
+        scoreboardBody.innerHTML = `
+            <div class="scoreboard-item" style="text-align: center;">
+                <div class="position"><i class="fas fa-info-circle"></i></div>
+                <div class="username">No hay usuarios registrados</div>
+                <div class="score">---</div>
+            </div>
+        `;
+        return;
+    }
+    
+    // Ordenar usuarios por puntuación (de mayor a menor)
+    users.sort((a, b) => (b.score || 0) - (a.score || 0));
+    
+    // Agregar usuarios a la tabla
+    users.forEach((user, index) => {
+        const item = document.createElement('div');
+        item.className = 'scoreboard-item';
+        
+        // Resaltar usuario actual
+        if (user.username === currentUsername) {
+            item.classList.add('current-user');
+        }
+        
+        // Agregar iconos para los primeros puestos
+        let medalIcon = '';
+        if (index === 0) {
+            medalIcon = '<i class="fas fa-medal medal-gold"></i> ';
+        } else if (index === 1) {
+            medalIcon = '<i class="fas fa-medal medal-silver"></i> ';
+        } else if (index === 2) {
+            medalIcon = '<i class="fas fa-medal medal-bronze"></i> ';
+        }
+        
+        item.innerHTML = `
+            <div class="position">${medalIcon}${index + 1}</div>
+            <div class="username">${user.username}</div>
+            <div class="score">${user.score || 0}</div>
+        `;
+        
+        scoreboardBody.appendChild(item);
+    });
+}
+
+// Utilidades
+function showError(element, message) {
+    element.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+    element.style.display = 'block';
+}
+
+function showSuccess(element, message) {
+    element.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+    element.style.display = 'block';
+}
