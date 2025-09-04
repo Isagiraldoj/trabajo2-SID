@@ -70,6 +70,29 @@ function setupEventListeners() {
     newScoreInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') updateScore();
     });
+    
+    // Focus automático en el campo de score al mostrar la sección
+    updateScoreBtn.addEventListener('click', () => {
+        setTimeout(() => {
+            newScoreInput.focus();
+        }, 100);
+    });
+    
+    // Validación en tiempo real
+    newScoreInput.addEventListener('input', (e) => {
+        const value = e.target.value;
+        if (value && !isNaN(value) && parseInt(value) >= 0) {
+            newScoreInput.style.borderColor = 'var(--success-color)';
+        } else {
+            newScoreInput.style.borderColor = 'var(--border-color)';
+        }
+    });
+    
+    // Limpiar mensajes al empezar a escribir
+    newScoreInput.addEventListener('focus', () => {
+        scoreError.style.display = 'none';
+        scoreSuccess.style.display = 'none';
+    });
 }
 
 // Funciones de navegación
@@ -152,6 +175,7 @@ async function login() {
             localStorage.setItem('username', currentUsername);
             
             showMainPanel();
+            testAPI(); // Ejecutar test después de iniciar sesión
         } else {
             const error = await response.json();
             showError(loginError, error.msg || 'Error en usuario o contraseña');
@@ -224,18 +248,21 @@ async function verifyToken() {
         
         if (response.ok) {
             const data = await response.json();
-            // Verificar que el usuario tenga datos
+            console.log("Datos de verificación:", data); // Para debug
             if (data.usuario) {
                 showMainPanel();
+                testAPI(); // Ejecutar test después de verificar
             } else {
+                console.log("No se encontró usuario en la respuesta");
                 logout();
             }
         } else {
-            // Token inválido, cerrar sesión
+            console.log("Token inválido o error en la respuesta");
             logout();
         }
     } catch (error) {
         showError(loginError, 'Error de conexión');
+        console.error("Error en verifyToken:", error);
     }
 }
 
@@ -253,14 +280,21 @@ async function updateScore() {
     
     if (isNaN(newScore) || newScore < 0) {
         showError(scoreError, 'Por favor, ingresa una puntuación válida');
+        newScoreInput.focus();
         return;
     }
     
     try {
         // Mostrar estado de carga
+        const originalText = submitScoreButton.innerHTML;
         submitScoreButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
         submitScoreButton.disabled = true;
+        newScoreInput.disabled = true;
         
+        // Agregar clase de loading
+        submitScoreButton.classList.add('loading');
+        
+        // Intenta con diferentes formatos que la API podría esperar
         const response = await fetch(`${API_URL}/api/usuarios`, {
             method: 'PATCH',
             headers: {
@@ -269,32 +303,76 @@ async function updateScore() {
             },
             body: JSON.stringify({ 
                 username: currentUsername,
-                data: { score: newScore }
+                score: newScore  // Primero intenta con este formato
             })
         });
         
-        if (response.ok) {
-            showSuccess(scoreSuccess, 'Puntuación actualizada correctamente');
+        // Si falla, intenta con otro formato
+        if (!response.ok) {
+            const secondResponse = await fetch(`${API_URL}/api/usuarios`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-token': authToken
+                },
+                body: JSON.stringify({ 
+                    username: currentUsername,
+                    data: { score: newScore }  // Segundo intento
+                })
+            });
+            
+            if (secondResponse.ok) {
+                showSuccess(scoreSuccess, '¡Puntuación actualizada correctamente! 🎉');
+                newScoreInput.value = '';
+                
+                // Efecto visual de éxito
+                submitScoreButton.classList.remove('loading');
+                submitScoreButton.classList.add('success');
+                setTimeout(() => {
+                    submitScoreButton.classList.remove('success');
+                }, 2000);
+                
+                // Recargar la tabla de puntuaciones si está visible
+                if (!scoreboardSection.classList.contains('hidden')) {
+                    loadScoreboard();
+                }
+            } else {
+                const error = await secondResponse.json();
+                showError(scoreError, error.msg || 'Error al actualizar la puntuación');
+                
+                // Feedback visual de error
+                submitScoreButton.classList.remove('loading');
+                submitScoreButton.classList.add('error');
+                setTimeout(() => {
+                    submitScoreButton.classList.remove('error');
+                }, 2000);
+            }
+        } else {
+            showSuccess(scoreSuccess, '¡Puntuación actualizada correctamente! 🎉');
             newScoreInput.value = '';
+            
+            // Efecto visual de éxito
+            submitScoreButton.classList.remove('loading');
+            submitScoreButton.classList.add('success');
+            setTimeout(() => {
+                submitScoreButton.classList.remove('success');
+            }, 2000);
             
             // Recargar la tabla de puntuaciones si está visible
             if (!scoreboardSection.classList.contains('hidden')) {
                 loadScoreboard();
             }
-        } else {
-            const error = await response.json();
-            showError(scoreError, error.msg || 'Error al actualizar la puntuación');
         }
     } catch (error) {
-        showError(scoreError, 'Error de conexión');
+        showError(scoreError, 'Error de conexión. Intenta nuevamente.');
+        submitScoreButton.classList.remove('loading');
     } finally {
-        // Restaurar estado normal del botón
-        submitScoreButton.innerHTML = '<i class="fas fa-save"></i> Actualizar';
+        // Restaurar estado normal
+        submitScoreButton.innerHTML = '<i class="fas fa-save"></i> Actualizar Puntuación';
         submitScoreButton.disabled = false;
+        newScoreInput.disabled = false;
     }
 }
-
-// ... (código anterior se mantiene igual)
 
 async function loadScoreboard() {
     try {
@@ -357,20 +435,30 @@ function displayScoreboard(users) {
         return;
     }
     
-    // Depuración: mostrar la estructura de los datos de usuario
-    console.log("Estructura del primer usuario:", users[0]);
+    // DEBUG: Mostrar la estructura completa del primer usuario
+    console.log("Estructura completa del primer usuario:", users[0]);
     
-    // Ordenar usuarios por puntuación (de mayor a menor)
-    // Buscar el campo correcto que contiene la puntuación
+    // Buscar cualquier campo que parezca ser numérico (podría ser la puntuación)
+    const numericFields = [];
+    Object.keys(users[0]).forEach(key => {
+        if (typeof users[0][key] === 'number') {
+            numericFields.push(key);
+        }
+    });
+    console.log("Campos numéricos encontrados:", numericFields);
+    
+    // Ordenar usuarios - probar con diferentes campos
     users.sort((a, b) => {
-        // Intentar encontrar el campo de puntuación
+        // Prioridad de campos para buscar la puntuación
         const scoreA = a.score !== undefined ? a.score : 
                       (a.puntuacion !== undefined ? a.puntuacion : 
-                      (a.points !== undefined ? a.points : 0));
+                      (a.points !== undefined ? a.points : 
+                      (a.puntos !== undefined ? a.puntos : 0)));
         
         const scoreB = b.score !== undefined ? b.score : 
                       (b.puntuacion !== undefined ? b.puntuacion : 
-                      (b.points !== undefined ? b.points : 0));
+                      (b.points !== undefined ? b.points : 
+                      (b.puntos !== undefined ? b.puntos : 0)));
         
         return scoreB - scoreA;
     });
@@ -385,17 +473,20 @@ function displayScoreboard(users) {
             item.classList.add('current-user');
         }
         
-        // Intentar encontrar el campo de puntuación
-        let userScore = 0;
-        if (user.score !== undefined) {
-            userScore = user.score;
-        } else if (user.puntuacion !== undefined) {
-            userScore = user.puntuacion;
-        } else if (user.points !== undefined) {
-            userScore = user.points;
-        } else {
-            // Si no encontramos el campo, mostramos todos los campos para depuración
-            console.log("Usuario sin campo score claro:", user);
+        // Buscar la puntuación en diferentes campos posibles
+        let userScore = '0';
+        const possibleScoreFields = ['score', 'puntuacion', 'points', 'puntos'];
+        
+        for (const field of possibleScoreFields) {
+            if (user[field] !== undefined) {
+                userScore = user[field];
+                break;
+            }
+        }
+        
+        // Si no encontramos, mostrar todos los campos para debug
+        if (userScore === '0') {
+            console.log("Usuario sin campo de puntuación claro:", user);
         }
         
         // Agregar iconos para los primeros puestos
@@ -418,7 +509,31 @@ function displayScoreboard(users) {
     });
 }
 
-// ... (el resto del código se mantiene igual)
+// Función de debugging para ver la respuesta de la API
+async function testAPI() {
+    try {
+        console.log("Probando conexión con la API...");
+        
+        // Probamos obtener los datos del usuario actual
+        const response = await fetch(`${API_URL}/api/usuarios/${currentUsername}`, {
+            method: 'GET',
+            headers: {
+                'x-token': authToken
+            }
+        });
+        
+        if (response.ok) {
+            const userData = await response.json();
+            console.log("Datos del usuario actual:", userData);
+        } else {
+            console.error("Error al obtener datos del usuario:", response.status);
+        }
+        
+    } catch (error) {
+        console.error("Error en testAPI:", error);
+    }
+}
+
 // Utilidades
 function showError(element, message) {
     element.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;

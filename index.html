@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Puntuaciones - [Tu Nombre]</title>
+    <title>Sistema de Puntuaciones - ISABELA GIRALDO JIMENEZ</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -110,13 +110,19 @@
                     <p>Ingresa tu nueva puntuación para guardarla en el sistema</p>
                 </div>
                 
-                <div class="score-form">
-                    <div class="input-with-icon">
-                        <i class="fas fa-star"></i>
-                        <input type="number" id="newScore" placeholder="Ingresa tu nueva puntuación">
+                <div class="score-input-container">
+                    <div class="input-group">
+                        <label for="newScore">Ingresa tu puntuación:</label>
+                        <input 
+                            type="number" 
+                            id="newScore" 
+                            placeholder="Ej: 1000" 
+                            min="0"
+                            class="score-input"
+                        >
                     </div>
-                    <button id="submitScore" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Actualizar
+                    <button id="submitScore" class="btn btn-primary btn-large">
+                        <i class="fas fa-save"></i> Actualizar Puntuación
                     </button>
                 </div>
                 <div id="scoreError" class="error-message"></div>
@@ -145,7 +151,7 @@
     </div>
 
     <footer>
-        <p>Sistema de Autenticación y Puntuaciones - Desarrollado por [Tu Nombre]</p>
+        <p>Sistema de Autenticación y Puntuaciones - Desarrollado por ISABELA GIRALDO JIMENEZ</p>
     </footer>
 
     <script src="main.js"></script>

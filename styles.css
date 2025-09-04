@@ -13,6 +13,10 @@
     --shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
     --gradient: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
     --gradient-accent: linear-gradient(135deg, var(--accent-color), #ff8a00);
+    --border-color: #e0e0e0;
+    --muted-color: #aaa;
+    --bg-color: #fff;
+    --text-color: #2d3436;
 }
 
 * {
@@ -369,15 +373,100 @@ header {
     font-weight: 500;
 }
 
-.score-form {
+/* Contenedor principal para la entrada de score */
+.score-input-container {
     display: flex;
-    gap: 15px;
-    margin-bottom: 25px;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.score-form .input-with-icon {
-    flex: 1;
-    margin-bottom: 0;
+/* Grupo de entrada */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.input-group label {
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 1.1rem;
+}
+
+/* Campo de entrada de score */
+.score-input {
+    padding: 1rem 1.5rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-align: center;
+    background: var(--bg-color);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.score-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+    transform: translateY(-2px);
+}
+
+.score-input::placeholder {
+    color: var(--muted-color);
+    font-weight: normal;
+}
+
+/* Botón grande para enviar */
+.btn-large {
+    padding: 1.2rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-large:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Estados del botón */
+.btn.loading {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+.btn.success {
+    background-color: var(--success-color) !important;
+    border-color: var(--success-color) !important;
+}
+
+.btn.error {
+    background-color: var(--error-color) !important;
+    border-color: var(--error-color) !important;
+}
+
+/* Animaciones */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.btn-large:active {
+    animation: pulse 0.3s ease;
 }
 
 .scoreboard-container {
@@ -490,12 +579,19 @@ footer {
         flex-direction: column;
     }
     
-    .score-form {
-        flex-direction: column;
+    .score-input-container {
+        padding: 1.5rem;
+        margin: 0 1rem;
     }
     
-    .btn {
-        padding: 14px 20px;
+    .score-input {
+        font-size: 1.1rem;
+        padding: 0.8rem 1.2rem;
+    }
+    
+    .btn-large {
+        padding: 1rem 1.5rem;
+        font-size: 1rem;
     }
     
     .scoreboard-header, .scoreboard-item {
