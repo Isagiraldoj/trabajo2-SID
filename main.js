@@ -1,5 +1,5 @@
 // Constantes y variables globales
-const API_URL = 'https://sid-restapi.onrender.com';
+const API_URL = 'http://127.0.0.1:1234';
 let authToken = '';
 let currentUsername = '';
 
